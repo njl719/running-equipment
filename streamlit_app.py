@@ -321,7 +321,7 @@ else:
                 st.success(f"✅ 为您找到 {len(recommendations)} 款合适的装备")
                 st.dataframe(pd.DataFrame(recommendations), use_container_width=True, height=300)
 
-    # ------------------- 标签页3：数据可视化分析（只用Streamlit原生图表） -------------------
+    # ------------------- 标签页3：数据可视化分析（完全移除自定义颜色） -------------------
     with tab3:
         st.header("装备数据可视化分析")
         chart_type = st.selectbox("选择图表类型", ["装备里程统计", "磨损程度分布"], key="chart_type_select")
@@ -331,13 +331,13 @@ else:
                 if chart_type == "装备里程统计":
                     mileage_data = user_equips[["name", "mileage"]].rename(columns={"name": "装备名称", "mileage": "累计里程(km)"})
                     st.subheader("各装备累计使用里程")
-                    st.bar_chart(mileage_data, x="装备名称", y="累计里程(km)", use_container_width=True, color="#3498db")
+                    st.bar_chart(mileage_data, x="装备名称", y="累计里程(km)", use_container_width=True)
                 
                 elif chart_type == "磨损程度分布":
                     wear_counts = user_equips["wear"].value_counts().reset_index()
                     wear_counts.columns = ["磨损程度", "数量"]
                     st.subheader("装备磨损程度分布")
-                    st.bar_chart(wear_counts, x="磨损程度", y="数量", use_container_width=True, color=["#2ecc71", "#f39c12", "#e74c3c"])
+                    st.bar_chart(wear_counts, x="磨损程度", y="数量", use_container_width=True)
         else:
             st.info("暂无装备数据，无法生成图表")
 
@@ -454,9 +454,9 @@ else:
                         daily_data = daily_data.rename(columns={"distance": "距离(km)", "heart_rate": "平均心率(次/分)"})
                         
                         st.subheader("每日跑步距离趋势")
-                        st.line_chart(daily_data, x="date", y="距离(km)", use_container_width=True, color="#2ecc71")
+                        st.line_chart(daily_data, x="date", y="距离(km)", use_container_width=True)
                         
                         st.subheader("心率变化趋势")
-                        st.line_chart(daily_data, x="date", y="平均心率(次/分)", use_container_width=True, color="#e74c3c")
+                        st.line_chart(daily_data, x="date", y="平均心率(次/分)", use_container_width=True)
         else:
             st.info("暂无运动记录，点击上方按钮添加第一条记录吧！")
