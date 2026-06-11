@@ -3,11 +3,15 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 from datetime import datetime
+import matplotlib.font_manager as fm
 
-# ------------------- 全局配置 -------------------
-# 修复Linux云端中文乱码（使用服务器自带的中文字体）
-plt.rcParams["font.sans-serif"] = ["WenQuanYi Micro Hei", "SimHei", "DejaVu Sans"]
+# ------------------- 全局配置（彻底解决中文乱码） -------------------
+# 强制使用Linux云端预装的文泉驿中文字体
+plt.rcParams["font.sans-serif"] = ["WenQuanYi Micro Hei", "WenQuanYi Zen Hei", "DejaVu Sans"]
 plt.rcParams["axes.unicode_minus"] = False
+# 清除matplotlib字体缓存，强制重新加载
+fm._rebuild()
+
 st.set_page_config(
     page_title="跑步装备智能管理平台",
     layout="wide",
@@ -275,8 +279,8 @@ else:
                 
                 if st.button("生成磨损曲线", type="primary", use_container_width=True, key="wear_curve_btn") and equip['type'] == "跑鞋":
                     with st.spinner("正在生成图表..."):
-                        # 缩小图表尺寸
-                        fig, ax = plt.subplots(figsize=(7, 4))
+                        # 优化图表比例：6:5 更适合饼图和曲线图
+                        fig, ax = plt.subplots(figsize=(6, 5))
                         mileage_points = np.linspace(0, 800, 100)
                         cushion_decay = 100 * np.exp(-0.0015 * mileage_points)
                         
@@ -333,27 +337,28 @@ else:
                 st.success(f"✅ 为您找到 {len(recommendations)} 款合适的装备")
                 st.dataframe(pd.DataFrame(recommendations), use_container_width=True, height=300)
 
-    # ------------------- 标签页3：数据可视化分析 -------------------
+    # ------------------- 标签页3：数据可视化分析（优化比例+中文） -------------------
     with tab3:
         st.header("装备数据可视化分析")
         chart_type = st.selectbox("选择图表类型", ["装备分类占比", "装备里程统计", "磨损程度分布"], key="chart_type_select")
         
         if not user_equips.empty:
             with st.spinner("正在生成图表..."):
-                # 缩小图表尺寸
-                fig, ax = plt.subplots(figsize=(7, 4))
+                # 统一使用6:5的黄金比例，避免图表变形
+                fig, ax = plt.subplots(figsize=(6, 5))
                 
                 if chart_type == "装备分类占比":
                     type_counts = user_equips["type"].value_counts()
                     ax.pie(type_counts.values, labels=type_counts.index, autopct="%1.1f%%", startangle=90, 
-                          colors=["#3498db", "#2ecc71", "#f39c12", "#9b59b6"])
+                          colors=["#3498db", "#2ecc71", "#f39c12", "#9b59b6"],
+                          textprops={'fontsize': 10})
                     ax.set_title("装备分类占比统计", fontsize=12)
                 
                 elif chart_type == "装备里程统计":
                     bars = ax.bar(user_equips["name"], user_equips["mileage"], color="#3498db")
                     ax.set_title("各装备累计使用里程", fontsize=12)
                     ax.set_ylabel("累计里程(km)", fontsize=10)
-                    ax.tick_params(axis='x', rotation=30)
+                    ax.tick_params(axis='x', rotation=30, labelsize=9)
                     for bar in bars:
                         height = bar.get_height()
                         ax.text(bar.get_x() + bar.get_width()/2., height, f"{height:.1f}km", 
@@ -366,6 +371,7 @@ else:
                                  color=[color_map.get(w, "#3498db") for w in wear_counts.index])
                     ax.set_title("装备磨损程度分布", fontsize=12)
                     ax.set_ylabel("装备数量", fontsize=10)
+                    ax.tick_params(axis='x', labelsize=9)
                     for bar in bars:
                         height = bar.get_height()
                         ax.text(bar.get_x() + bar.get_width()/2., height, f"{int(height)}件", 
@@ -376,7 +382,7 @@ else:
         else:
             st.info("暂无装备数据，无法生成图表")
 
-    # ------------------- 标签页4：运动记录管理 -------------------
+    # ------------------- 标签页4：运动记录管理（优化双图比例+中文） -------------------
     with tab4:
         st.header("运动记录管理")
         
@@ -473,6 +479,7 @@ else:
                 st.subheader("运动趋势")
                 if st.button("生成运动统计图表", type="primary", use_container_width=True, key="sport_chart_btn"):
                     with st.spinner("正在生成图表..."):
+                        # 优化双图比例：7:6，上下两个图各占3个单位高度
                         fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(7, 6))
                         
                         # 每日跑量趋势
@@ -483,6 +490,7 @@ else:
                         ax1.set_title("每日跑步距离趋势", fontsize=12)
                         ax1.set_ylabel("距离(km)", fontsize=10)
                         ax1.grid(True, alpha=0.3)
+                        ax1.tick_params(axis='x', rotation=30, labelsize=9)
                         
                         # 心率与配速对比
                         ax3 = ax2.twinx()
@@ -499,8 +507,9 @@ else:
                         ax2.set_title("心率与配速变化趋势", fontsize=12)
                         ax2.set_ylabel("心率(次/分)", fontsize=10, color="red")
                         ax3.set_ylabel("配速(min/km)", fontsize=10, color="blue")
-                        ax2.tick_params(axis="y", labelcolor="red")
-                        ax3.tick_params(axis="y", labelcolor="blue")
+                        ax2.tick_params(axis="y", labelcolor="red", labelsize=9)
+                        ax3.tick_params(axis="y", labelcolor="blue", labelsize=9)
+                        ax2.tick_params(axis='x', rotation=30, labelsize=9)
                         
                         lines1, labels1 = ax2.get_legend_handles_labels()
                         lines2, labels2 = ax3.get_legend_handles_labels()
