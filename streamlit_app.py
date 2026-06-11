@@ -5,12 +5,13 @@ import numpy as np
 from datetime import datetime
 import matplotlib.font_manager as fm
 
-# ------------------- 全局配置（彻底解决中文乱码） -------------------
-# 强制使用Linux云端预装的文泉驿中文字体
-plt.rcParams["font.sans-serif"] = ["WenQuanYi Micro Hei", "WenQuanYi Zen Hei", "DejaVu Sans"]
+# ------------------- 全局配置（终极中文乱码修复） -------------------
+# 优先使用Streamlit云端预装的Noto Sans CJK中文字体（100%存在）
+plt.rcParams["font.family"] = "sans-serif"
+plt.rcParams["font.sans-serif"] = ["Noto Sans CJK SC", "WenQuanYi Micro Hei", "SimHei", "DejaVu Sans"]
 plt.rcParams["axes.unicode_minus"] = False
-# 清除matplotlib字体缓存，强制重新加载
-fm._rebuild()
+# 强制重新加载字体管理器，跳过缓存
+fm._load_fontmanager(try_read_cache=False)
 
 st.set_page_config(
     page_title="跑步装备智能管理平台",
@@ -60,7 +61,7 @@ def init_session_data():
 # 初始化数据
 init_session_data()
 
-# ------------------- 登录注册系统 -------------------
+# ------------------- 登录注册系统（已去掉多余文字） -------------------
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
     st.session_state.current_user = None
@@ -69,7 +70,8 @@ if "logged_in" not in st.session_state:
 # 登录/注册页面
 if not st.session_state.logged_in:
     st.markdown("<h1 style='text-align: center; color: #2c3e50;'>🏃 跑步装备智能管理与推荐平台</h1>", unsafe_allow_html=True)
-    st.markdown("<h3 style='text-align: center; color: #7f8c8d; margin-bottom: 50px;'>Python程序设计课程设计成果</h3>", unsafe_allow_html=True)
+    # 已删除"Python程序设计课程设计成果"这行文字
+    st.markdown("<div style='margin-bottom: 70px;'></div>", unsafe_allow_html=True)
     
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
@@ -279,7 +281,6 @@ else:
                 
                 if st.button("生成磨损曲线", type="primary", use_container_width=True, key="wear_curve_btn") and equip['type'] == "跑鞋":
                     with st.spinner("正在生成图表..."):
-                        # 优化图表比例：6:5 更适合饼图和曲线图
                         fig, ax = plt.subplots(figsize=(6, 5))
                         mileage_points = np.linspace(0, 800, 100)
                         cushion_decay = 100 * np.exp(-0.0015 * mileage_points)
@@ -337,14 +338,13 @@ else:
                 st.success(f"✅ 为您找到 {len(recommendations)} 款合适的装备")
                 st.dataframe(pd.DataFrame(recommendations), use_container_width=True, height=300)
 
-    # ------------------- 标签页3：数据可视化分析（优化比例+中文） -------------------
+    # ------------------- 标签页3：数据可视化分析 -------------------
     with tab3:
         st.header("装备数据可视化分析")
         chart_type = st.selectbox("选择图表类型", ["装备分类占比", "装备里程统计", "磨损程度分布"], key="chart_type_select")
         
         if not user_equips.empty:
             with st.spinner("正在生成图表..."):
-                # 统一使用6:5的黄金比例，避免图表变形
                 fig, ax = plt.subplots(figsize=(6, 5))
                 
                 if chart_type == "装备分类占比":
@@ -382,7 +382,7 @@ else:
         else:
             st.info("暂无装备数据，无法生成图表")
 
-    # ------------------- 标签页4：运动记录管理（优化双图比例+中文） -------------------
+    # ------------------- 标签页4：运动记录管理 -------------------
     with tab4:
         st.header("运动记录管理")
         
@@ -479,7 +479,6 @@ else:
                 st.subheader("运动趋势")
                 if st.button("生成运动统计图表", type="primary", use_container_width=True, key="sport_chart_btn"):
                     with st.spinner("正在生成图表..."):
-                        # 优化双图比例：7:6，上下两个图各占3个单位高度
                         fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(7, 6))
                         
                         # 每日跑量趋势
