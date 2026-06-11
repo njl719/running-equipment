@@ -1,18 +1,9 @@
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
 import numpy as np
 from datetime import datetime
-import matplotlib.font_manager as fm
 
-# ------------------- 全局配置（终极中文乱码修复） -------------------
-# 优先使用Streamlit云端预装的Noto Sans CJK中文字体（100%存在）
-plt.rcParams["font.family"] = "sans-serif"
-plt.rcParams["font.sans-serif"] = ["Noto Sans CJK SC", "WenQuanYi Micro Hei", "SimHei", "DejaVu Sans"]
-plt.rcParams["axes.unicode_minus"] = False
-# 强制重新加载字体管理器，跳过缓存
-fm._load_fontmanager(try_read_cache=False)
-
+# ------------------- 全局配置 -------------------
 st.set_page_config(
     page_title="跑步装备智能管理平台",
     layout="wide",
@@ -61,7 +52,7 @@ def init_session_data():
 # 初始化数据
 init_session_data()
 
-# ------------------- 登录注册系统（已去掉多余文字） -------------------
+# ------------------- 登录注册系统 -------------------
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
     st.session_state.current_user = None
@@ -70,7 +61,6 @@ if "logged_in" not in st.session_state:
 # 登录/注册页面
 if not st.session_state.logged_in:
     st.markdown("<h1 style='text-align: center; color: #2c3e50;'>🏃 跑步装备智能管理与推荐平台</h1>", unsafe_allow_html=True)
-    # 已删除"Python程序设计课程设计成果"这行文字
     st.markdown("<div style='margin-bottom: 70px;'></div>", unsafe_allow_html=True)
     
     col1, col2, col3 = st.columns([1, 2, 1])
@@ -281,26 +271,20 @@ else:
                 
                 if st.button("生成磨损曲线", type="primary", use_container_width=True, key="wear_curve_btn") and equip['type'] == "跑鞋":
                     with st.spinner("正在生成图表..."):
-                        fig, ax = plt.subplots(figsize=(6, 5))
+                        # Streamlit原生折线图，100%中文支持
                         mileage_points = np.linspace(0, 800, 100)
                         cushion_decay = 100 * np.exp(-0.0015 * mileage_points)
                         
-                        ax.plot(mileage_points, cushion_decay, "b-", linewidth=2, label="理论缓震性能")
-                        ax.axhline(y=60, color="orange", linestyle="--", label="预警阈值(60%)")
-                        ax.axhline(y=30, color="red", linestyle="--", label="更换阈值(30%)")
+                        chart_data = pd.DataFrame({
+                            "累计使用里程(km)": mileage_points,
+                            "理论缓震性能(%)": cushion_decay
+                        })
                         
-                        current_cushion = 100 * np.exp(-0.0015 * equip['mileage'])
-                        ax.scatter([equip['mileage']], [current_cushion], color="red", s=100, zorder=5,
-                                  label=f"当前状态: {current_cushion:.1f}%")
+                        st.subheader(f"{equip['brand']} {equip['name']} - 缓震性能衰减曲线")
+                        st.line_chart(chart_data, x="累计使用里程(km)", y="理论缓震性能(%)", use_container_width=True)
                         
-                        ax.set_title(f"{equip['brand']} {equip['name']} - 缓震性能衰减曲线", fontsize=12)
-                        ax.set_xlabel("累计使用里程(km)", fontsize=10)
-                        ax.set_ylabel("缓震性能剩余(%)", fontsize=10)
-                        ax.set_ylim(0, 105)
-                        ax.legend(fontsize=9)
-                        ax.grid(True, alpha=0.3)
-                        
-                        st.pyplot(fig)
+                        st.info(f"当前状态：缓震性能剩余 {100 * np.exp(-0.0015 * equip['mileage']):.1f}%")
+                        st.info("预警阈值：60% | 更换阈值：30%")
 
     # ------------------- 标签页2：个性化智能推荐 -------------------
     with tab2:
@@ -338,47 +322,29 @@ else:
                 st.success(f"✅ 为您找到 {len(recommendations)} 款合适的装备")
                 st.dataframe(pd.DataFrame(recommendations), use_container_width=True, height=300)
 
-    # ------------------- 标签页3：数据可视化分析 -------------------
+    # ------------------- 标签页3：数据可视化分析（全部改用Streamlit原生图表） -------------------
     with tab3:
         st.header("装备数据可视化分析")
         chart_type = st.selectbox("选择图表类型", ["装备分类占比", "装备里程统计", "磨损程度分布"], key="chart_type_select")
         
         if not user_equips.empty:
             with st.spinner("正在生成图表..."):
-                fig, ax = plt.subplots(figsize=(6, 5))
-                
                 if chart_type == "装备分类占比":
-                    type_counts = user_equips["type"].value_counts()
-                    ax.pie(type_counts.values, labels=type_counts.index, autopct="%1.1f%%", startangle=90, 
-                          colors=["#3498db", "#2ecc71", "#f39c12", "#9b59b6"],
-                          textprops={'fontsize': 10})
-                    ax.set_title("装备分类占比统计", fontsize=12)
+                    type_counts = user_equips["type"].value_counts().reset_index()
+                    type_counts.columns = ["装备类型", "数量"]
+                    st.subheader("装备分类占比统计")
+                    st.pie_chart(type_counts, values="数量", names="装备类型", use_container_width=True)
                 
                 elif chart_type == "装备里程统计":
-                    bars = ax.bar(user_equips["name"], user_equips["mileage"], color="#3498db")
-                    ax.set_title("各装备累计使用里程", fontsize=12)
-                    ax.set_ylabel("累计里程(km)", fontsize=10)
-                    ax.tick_params(axis='x', rotation=30, labelsize=9)
-                    for bar in bars:
-                        height = bar.get_height()
-                        ax.text(bar.get_x() + bar.get_width()/2., height, f"{height:.1f}km", 
-                               ha="center", va="bottom", fontsize=9)
+                    mileage_data = user_equips[["name", "mileage"]].rename(columns={"name": "装备名称", "mileage": "累计里程(km)"})
+                    st.subheader("各装备累计使用里程")
+                    st.bar_chart(mileage_data, x="装备名称", y="累计里程(km)", use_container_width=True, color="#3498db")
                 
                 elif chart_type == "磨损程度分布":
-                    wear_counts = user_equips["wear"].value_counts()
-                    color_map = {"轻微": "#2ecc71", "正常": "#f39c12", "严重": "#e74c3c"}
-                    bars = ax.bar(wear_counts.index, wear_counts.values, 
-                                 color=[color_map.get(w, "#3498db") for w in wear_counts.index])
-                    ax.set_title("装备磨损程度分布", fontsize=12)
-                    ax.set_ylabel("装备数量", fontsize=10)
-                    ax.tick_params(axis='x', labelsize=9)
-                    for bar in bars:
-                        height = bar.get_height()
-                        ax.text(bar.get_x() + bar.get_width()/2., height, f"{int(height)}件", 
-                               ha="center", va="bottom", fontsize=9)
-                
-                plt.tight_layout()
-                st.pyplot(fig)
+                    wear_counts = user_equips["wear"].value_counts().reset_index()
+                    wear_counts.columns = ["磨损程度", "数量"]
+                    st.subheader("装备磨损程度分布")
+                    st.bar_chart(wear_counts, x="磨损程度", y="数量", use_container_width=True, color=["#2ecc71", "#f39c12", "#e74c3c"])
         else:
             st.info("暂无装备数据，无法生成图表")
 
@@ -479,42 +445,29 @@ else:
                 st.subheader("运动趋势")
                 if st.button("生成运动统计图表", type="primary", use_container_width=True, key="sport_chart_btn"):
                     with st.spinner("正在生成图表..."):
-                        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(7, 6))
-                        
                         # 每日跑量趋势
                         user_sports["date"] = pd.to_datetime(user_sports["date"])
-                        daily_distance = user_sports.groupby("date")["distance"].sum()
+                        daily_data = user_sports.groupby("date").agg({
+                            "distance": "sum",
+                            "heart_rate": "mean"
+                        }).reset_index()
                         
-                        ax1.plot(daily_distance.index, daily_distance.values, "o-", color="#2ecc71", linewidth=2)
-                        ax1.set_title("每日跑步距离趋势", fontsize=12)
-                        ax1.set_ylabel("距离(km)", fontsize=10)
-                        ax1.grid(True, alpha=0.3)
-                        ax1.tick_params(axis='x', rotation=30, labelsize=9)
-                        
-                        # 心率与配速对比
-                        ax3 = ax2.twinx()
-                        
-                        ax2.plot(user_sports["date"], user_sports["heart_rate"], "r-", label="平均心率", linewidth=2)
-                        # 转换配速为数值用于绘图
+                        # 转换配速为数值
                         pace_values = []
                         for p in user_sports["pace"]:
                             m, s = p.split(":")
                             pace_values.append(float(m) + float(s)/60)
+                        daily_data["平均配速(min/km)"] = pace_values
+                        daily_data = daily_data.rename(columns={"distance": "距离(km)", "heart_rate": "平均心率(次/分)"})
                         
-                        ax3.plot(user_sports["date"], pace_values, "b-", label="平均配速", linewidth=2)
+                        st.subheader("每日跑步距离趋势")
+                        st.line_chart(daily_data, x="date", y="距离(km)", use_container_width=True, color="#2ecc71")
                         
-                        ax2.set_title("心率与配速变化趋势", fontsize=12)
-                        ax2.set_ylabel("心率(次/分)", fontsize=10, color="red")
-                        ax3.set_ylabel("配速(min/km)", fontsize=10, color="blue")
-                        ax2.tick_params(axis="y", labelcolor="red", labelsize=9)
-                        ax3.tick_params(axis="y", labelcolor="blue", labelsize=9)
-                        ax2.tick_params(axis='x', rotation=30, labelsize=9)
-                        
-                        lines1, labels1 = ax2.get_legend_handles_labels()
-                        lines2, labels2 = ax3.get_legend_handles_labels()
-                        ax2.legend(lines1 + lines2, labels1 + labels2, loc="upper left", fontsize=9)
-                        
-                        plt.tight_layout()
-                        st.pyplot(fig)
+                        st.subheader("心率与配速变化趋势")
+                        col_chart1, col_chart2 = st.columns(2)
+                        with col_chart1:
+                            st.line_chart(daily_data, x="date", y="平均心率(次/分)", use_container_width=True, color="#e74c3c")
+                        with col_chart2:
+                            st.line_chart(daily_data, x="date", y="平均配速(min/km)", use_container_width=True, color="#3498db")
         else:
             st.info("暂无运动记录，点击上方按钮添加第一条记录吧！")
